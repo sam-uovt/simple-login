@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Dash</title>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --bg-dark: #0a0a0c;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 80vh;
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 15px var(--neon-blue);
+            background: linear-gradient(to bottom, #0f0f12, #1a1a2e);
+            overflow: hidden;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+
+        .score-text {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        #overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        h1 {
+            color: var(--neon-blue);
+            text-shadow: 0 0 20px var(--neon-blue);
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: transparent;
+            color: white;
+            border: 2px solid var(--neon-pink);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px var(--neon-pink);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn:hover {
+            background: var(--neon-pink);
+            box-shadow: 0 0 25px var(--neon-pink);
+        }
+
+        .instructions {
+            margin-top: 20px;
+            color: #aaa;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="canvas"></canvas>
+        
+        <div id="ui-layer">
+            <div class="score-text">Score: <span id="score">0</span></div>
+        </div>
+
+        <div id="overlay">
+            <h1 id="title">NEON DASH</h1>
+            <p id="final-score" style="display: none; margin-bottom: 20px; font-size: 20px;"></p>
+            <button class="btn" id="start-btn">Start Game</button>
+            <div class="instructions" id="controls-hint">
+                Move mouse or touch to dodge red blocks.<br>
+                Survive as long as you can!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const title = document.getElementById('title');
+
+        let score = 0;
+        let gameActive = false;
+        let animationId;
+        let particles = [];
+        let obstacles = [];
+        let frameCount = 0;
+
+        // Player object
+        const player = {
+            x: 0,
+            y: 0,
+            size: 30,
+            color: '#00f3ff',
+            targetX: 0
+        };
+
+        function init() {
+            resize();
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 80;
+            player.targetX = player.x;
+        }
+
+        function resize() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            player.y = canvas.height - 80;
+        }
+
+        window.addEventListener('resize', resize);
+
+        // Input handling
+        const handleMove = (e) => {
+            if (!gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            let clientX;
+            
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+            } else {
+                clientX = e.clientX;
+            }
+            
+            player.targetX = clientX - rect.left;
+        };
+
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('touchmove', handleMove);
+
+        function createObstacle() {
+            const size = Math.random() * 30 + 20;
+            obstacles.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                size: size,
+                speed: 3 + (score / 10),
+                color: '#ff0055'
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    radius: Math.random() * 3,
+                    alpha: 1,
+                    color: color
+                });
+            }
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // Update player (smooth movement)
+            player.x += (player.targetX - player.x) * 0.2;
+
+            // Constrain player
+            if (player.x < player.size/2) player.x = player.size/2;
+            if (player.x > canvas.width - player.size/2) player.x = canvas.width - player.size/2;
+
+            // Spawn logic
+            frameCount++;
+            if (frameCount % Math.max(10, 40 - Math.floor(score/5)) === 0) {
+                createObstacle();
+            }
+
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += obs.speed;
+
+                // Collision detection
+                if (
+                    player.x - player.size/2 < obs.x + obs.size &&
+                    player.x + player.size/2 > obs.x &&
+                    player.y - player.size/2 < obs.y + obs.size &&
+                    player.y + player.size/2 > obs.y
+                ) {
+                    gameOver();
+                }
+
+                // Remove offscreen obstacles
+                if (obs.y > canvas.height) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    scoreElement.innerText = score;
+                }
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.02;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
+
+            // Draw obstacles
+            ctx.shadowBlur = 10;
+            for (const obs of obstacles) {
+                ctx.shadowColor = obs.color;
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.size, obs.size);
+            }
+
+            // Draw particles
+            ctx.shadowBlur = 0;
+            for (const p of particles) {
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            if (gameActive) {
+                animationId = requestAnimationFrame(() => {
+                    update();
+                    draw();
+                });
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            scoreElement.innerText = '0';
+            obstacles = [];
+            particles = [];
+            frameCount = 0;
+            gameActive = true;
+            overlay.style.display = 'none';
+            init();
+            draw();
+        }
+
+        function gameOver() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            createExplosion(player.x, player.y, player.color);
+            
+            setTimeout(() => {
+                title.innerText = "GAME OVER";
+                finalScoreDisplay.innerText = `Final Score: ${score}`;
+                finalScoreDisplay.style.display = 'block';
+                startBtn.innerText = "Try Again";
+                overlay.style.display = 'flex';
+            }, 500);
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>

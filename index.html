@@ -43,7 +43,7 @@
             border-radius: 4px;
             font-size: 1rem;
         }
-        .login-container button {
+        .login-container .button {
             width: 100%;
             padding: 0.75rem;
             background: #007bff;
@@ -53,8 +53,12 @@
             font-size: 1rem;
             cursor: pointer;
             transition: background 0.2s;
+            text-decoration: none;
+            display: flex;
+            text-align: center;
+            justify-content: center;
         }
-        .login-container button:hover {
+        .login-container .button:hover {
             background: #0056b3;
         }
         .login-container .register-link {
@@ -80,9 +84,9 @@
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
 
-            <button type="submit">Login</button>
+            <a href="search.html" class="button">Login</a>
         </form>
-        <a href="#" class="register-link">Don't have an account? Register</a>
+        <a href="/search.html" class="register-link">Don't have an account? Register</a>
     </div>
 </body>
 </html>

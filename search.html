@@ -3,20 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blue Search Portal</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Interactive Search Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Animated Background Gradient */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            background: linear-gradient(-45deg, #0f172a, #1e3a8a, #3b82f6, #0ea5e9);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px border rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Floating Particles */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            from { transform: translateY(100vh) rotate(0deg); opacity: 1; }
+            to { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Input Interaction */
+        .search-input:focus {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            transform: scale(1.02);
+        }
+
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
 
-    <div class="search-container">
-        <form class="search-form">
-            <h1>Search the Blue</h1>
-            <div class="input-group">
-                <input type="text" placeholder="What are you looking for?" aria-label="Search">
-                <button type="submit">Search</button>
+    <!-- Background Particles -->
+    <div id="particle-container"></div>
+
+    <div class="relative z-10 w-full max-w-2xl px-6">
+        <div class="text-center mb-10 space-y-4">
+            <h1 class="text-5xl md:text-7xl font-extrabold text-white tracking-tight drop-shadow-lg">
+                Explore <span class="text-blue-300">Infinite</span>
+            </h1>
+            <p class="text-blue-100 text-lg opacity-80">Discover the depths of the digital ocean</p>
+        </div>
+
+        <div class="glass-panel p-2 rounded-2xl md:rounded-full transition-all duration-300">
+            <form id="searchForm" class="flex flex-col md:flex-row items-center gap-2">
+                <div class="relative flex-1 w-full">
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        placeholder="What are you diving for?" 
+                        class="search-input w-full bg-transparent border-none py-4 px-8 text-white text-lg placeholder-blue-200 outline-none transition-all duration-300 rounded-full"
+                    >
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2">
+                        <div id="searchLoader" class="loader"></div>
+                    </div>
+                </div>
+                <button 
+                    type="submit" 
+                    class="w-full md:w-auto bg-blue-500 hover:bg-blue-400 text-white font-bold py-4 px-10 rounded-full transition-all duration-300 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                >
+                    <span id="btnText">Search</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- Simulated Results Message -->
+        <div id="feedback" class="mt-8 text-center text-white opacity-0 transition-opacity duration-500">
+            <div class="inline-block glass-panel px-6 py-3 rounded-full text-sm">
+                Searching across 1.2 billion records...
             </div>
-        </form>
+        </div>
     </div>
 
+    <script>
+        // Generate Particles
+        const container = document.getElementById('particle-container');
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const size = Math.random() * 60 + 10 + 'px';
+            p.style.width = size;
+            p.style.height = size;
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.animationDelay = Math.random() * 20 + 's';
+            p.style.opacity = Math.random() * 0.5;
+            container.appendChild(p);
+        }
+
+        // Search Interaction Logic
+        const form = document.getElementById('searchForm');
+        const input = document.getElementById('searchInput');
+        const loader = document.getElementById('searchLoader');
+        const feedback = document.getElementById('feedback');
+        const btnText = document.getElementById('btnText');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!input.value.trim()) return;
+
+            // Start Loading State
+            loader.style.display = 'block';
+            btnText.textContent = 'Seeking...';
+            feedback.classList.remove('opacity-0');
+            
+            // Simulate API Call
+            setTimeout(() => {
+                loader.style.display = 'none';
+                btnText.textContent = 'Search';
+                feedback.innerHTML = `<div class="inline-block glass-panel px-6 py-3 rounded-full text-sm">Found results for: <strong>${input.value}</strong></div>`;
+                
+                // Clear input with style
+                input.value = '';
+            }, 1500);
+        });
+    </script>
 </body>
 </html>
